@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DSB Dragon - Premier 3D Car Designs</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <!-- Three.js Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- GLTFLoader for loading .glb models -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <!-- OrbitControls for better camera interaction -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
+
+    <style>
+        /* Custom styles for the modernized "DSB Dragon" theme */
+        :root {
+            --accent-start: #ff410d;
+            --accent-end: #ff8400;
+            --dark-bg: #0d0d0d;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--dark-bg);
+            color: #e5e7eb;
+        }
+
+        .hero-bg {
+            background-color: var(--dark-bg);
+            position: relative;
+            overflow: hidden;
+        }
+
+        #particle-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            opacity: 0.7;
+        }
+
+        .section-title {
+            @apply text-4xl md:text-5xl font-black tracking-wider text-white mb-4;
+        }
+
+        .accent-gradient-text {
+            background: linear-gradient(90deg, var(--accent-start), var(--accent-end));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .section-subtitle {
+            @apply text-lg md:text-xl text-gray-400 max-w-3xl mx-auto;
+        }
+
+        .glass-card {
+            background: rgba(17, 17, 17, 0.5);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 1rem;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .glass-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 0 40px rgba(255, 65, 13, 0.2);
+        }
+
+        .primary-btn {
+            @apply text-white font-bold py-3 px-8 rounded-full transition-all duration-300 transform hover:scale-105;
+            background-image: linear-gradient(90deg, var(--accent-start), var(--accent-end));
+            background-size: 200% 100%;
+            transition: background-position 0.5s;
+        }
+        .primary-btn:hover {
+             background-position: 100% 0;
+        }
+
+        .secondary-btn {
+            @apply font-bold py-3 px-8 rounded-full transition-all duration-300;
+            border: 2px solid var(--accent-start);
+            color: var(--accent-start);
+        }
+        .secondary-btn:hover {
+             background-color: var(--accent-start);
+             color: white;
+        }
+
+        #car-canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+        
+        .fade-in-up {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+        }
+        .fade-in-up.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        #loading-indicator {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 1.2rem;
+            z-index: 10;
+            text-shadow: 0 0 5px black;
+        }
+    </style>
+</head>
+<body class="overflow-x-hidden">
+
+    <!-- Header -->
+    <header class="fixed top-0 left-0 right-0 z-50 transition-all duration-300" id="navbar">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-20">
+                <a href="#" class="text-3xl font-black text-white tracking-wider">DSB <span class="accent-gradient-text">DRAGON</span></a>
+                <nav class="hidden md:flex items-center space-x-8">
+                    <a href="#home" class="text-gray-300 hover:text-white transition">Home</a>
+                    <a href="#features" class="text-gray-300 hover:text-white transition">Features</a>
+                    <a href="#parts" class="text-gray-300 hover:text-white transition">Parts</a>
+                    <a href="#gallery" class="text-gray-300 hover:text-white transition">Gallery</a>
+                    <a href="#about" class="text-gray-300 hover:text-white transition">About</a>
+                    <a href="#contact" class="text-gray-300 hover:text-white transition">Contact</a>
+                </nav>
+                <a href="#contact" class="hidden md:inline-block primary-btn">Get a Quote</a>
+                <button id="mobile-menu-btn" class="md:hidden text-white">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path></svg>
+                </button>
+            </div>
+        </div>
+        <div id="mobile-menu" class="hidden md:hidden bg-black/95">
+             <nav class="flex flex-col items-center space-y-4 py-4">
+                <a href="#home" class="text-gray-300 hover:text-white transition">Home</a>
+                <a href="#features" class="text-gray-300 hover:text-white transition">Features</a>
+                <a href="#parts" class="text-gray-300 hover:text-white transition">Parts</a>
+                <a href="#gallery" class="text-gray-300 hover:text-white transition">Gallery</a>
+                <a href="#about" class="text-gray-300 hover:text-white transition">About</a>
+                <a href="#contact" class="text-gray-300 hover:text-white transition">Contact</a>
+                <a href="#contact" class="primary-btn mt-4">Get a Quote</a>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section id="home" class="h-screen flex items-center justify-center text-center hero-bg">
+        <canvas id="particle-canvas"></canvas>
+        <div class="z-10 px-4 relative">
+            <h1 class="text-5xl md:text-7xl lg:text-8xl font-black text-white uppercase tracking-tighter leading-tight">
+                Forging <span class="accent-gradient-text">Legends</span>
+            </h1>
+            <p class="mt-4 text-xl md:text-2xl text-gray-300 max-w-4xl mx-auto">
+                State-of-the-art 3D concepts for the future of motorsport.
+            </p>
+            <div class="mt-10">
+                <a href="#gallery" class="primary-btn text-lg">Explore Our Designs</a>
+            </div>
+        </div>
+    </section>
+    
+    <!-- Interactive 3D Model Section -->
+    <section id="interactive-model" class="py-20 md:py-32 bg-dark-bg">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-12">
+                <h2 class="section-title">Interactive Showcase</h2>
+                <p class="section-subtitle">Use your mouse to rotate, pan, and zoom. Experience the model in full 3D.</p>
+            </div>
+            <div id="canvas-container" class="relative w-full h-[300px] md:h-[500px] lg:h-[600px] rounded-lg shadow-2xl cursor-grab active:cursor-grabbing">
+                <div id="loading-indicator">Loading Model...</div>
+                <canvas id="car-canvas"></canvas>
+            </div>
+        </div>
+    </section>
+
+    <!-- Car Parts Section -->
+    <section id="parts" class="py-20 md:py-32 bg-black">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-16">
+                <h2 class="section-title">Anatomy of the <span class="accent-gradient-text">Dragon</span></h2>
+                <p class="section-subtitle">Every component is a masterpiece of engineering, designed for ultimate performance.</p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                <!-- Part 1: Engine -->
+                <div class="glass-card p-8 text-center fade-in-up">
+                    <i class="fas fa-cogs fa-3x mb-4 accent-gradient-text"></i>
+                    <h3 class="text-2xl font-bold text-white mb-2">Power Core</h3>
+                    <p class="text-gray-400">A high-revving hybrid V8, delivering over 1000hp with instant electric torque.</p>
+                </div>
+                <!-- Part 2: Chassis -->
+                <div class="glass-card p-8 text-center fade-in-up" style="transition-delay: 150ms;">
+                    <i class="fas fa-car-side fa-3x mb-4 accent-gradient-text"></i>
+                    <h3 class="text-2xl font-bold text-white mb-2">Carbon Monocoque</h3>
+                    <p class="text-gray-400">An ultra-lightweight and rigid chassis providing superior handling and safety.</p>
+                </div>
+                <!-- Part 3: Aerodynamics -->
+                <div class="glass-card p-8 text-center fade-in-up" style="transition-delay: 300ms;">
+                    <i class="fas fa-wind fa-3x mb-4 accent-gradient-text"></i>
+                    <h3 class="text-2xl font-bold text-white mb-2">Active Aero</h3>
+                    <p class="text-gray-400">Adaptive wings and vents that optimize downforce and reduce drag in real-time.</p>
+                </div>
+                <!-- Part 4: Suspension -->
+                <div class="glass-card p-8 text-center fade-in-up" style="transition-delay: 450ms;">
+                    <i class="fas fa-circle-nodes fa-3x mb-4 accent-gradient-text"></i>
+                    <h3 class="text-2xl font-bold text-white mb-2">Smart Suspension</h3>
+                    <p class="text-gray-400">Magnetorheological dampers that adjust in milliseconds to any track surface.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="py-20 md:py-32">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-16">
+                <h2 class="section-title">Technological Edge</h2>
+                <p class="section-subtitle">Engineered for peak performance with cutting-edge technology.</p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div class="glass-card p-8 text-center fade-in-up">
+                    <i class="fas fa-bolt-lightning fa-3x mb-4 accent-gradient-text"></i>
+                    <h3 class="text-2xl font-bold text-white mb-2">Kinetic Drive System</h3>
+                    <p class="text-gray-400">Advanced hybrid powertrain captures and redeploys energy, delivering explosive acceleration out of every corner.</p>
+                </div>
+                <div class="glass-card p-8 text-center fade-in-up" style="transition-delay: 200ms;">
+                    <i class="fas fa-satellite-dish fa-3x mb-4 accent-gradient-text"></i>
+                     <h3 class="text-2xl font-bold text-white mb-2">Telemetry Link</h3>
+                    <p class="text-gray-400">Real-time data streaming to the pit wall for strategic analysis and performance tuning.</p>
+                </div>
+                <div class="glass-card p-8 text-center fade-in-up" style="transition-delay: 400ms;">
+                    <i class="fas fa-brain fa-3x mb-4 accent-gradient-text"></i>
+                    <h3 class="text-2xl font-bold text-white mb-2">Neural Interface</h3>
+                    <p class="text-gray-400">Direct-to-driver feedback systems provide real-time data, creating a seamless bond between man and machine.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- Gallery Section, About, Contact, Footer remain the same -->
+    <section id="gallery" class="py-20 md:py-32 bg-black">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-16">
+                <h2 class="section-title">Design Gallery</h2>
+                <p class="section-subtitle">A collection of our most innovative designs. Each model is crafted with precision and a passion for performance.</p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                 <div class="group relative overflow-hidden rounded-lg shadow-lg fade-in-up">
+                    <img src="https://placehold.co/600x400/1a1a1a/ff410d?text=Project+Ignis" class="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-500" alt="Racing Car Design 1">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-60 group-hover:opacity-80 transition-opacity duration-300"></div>
+                    <div class="absolute bottom-0 left-0 p-6">
+                        <h3 class="text-2xl font-bold text-white transform translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300">Project: Ignis</h3>
+                    </div>
+                </div>
+                 <div class="group relative overflow-hidden rounded-lg shadow-lg fade-in-up" style="transition-delay: 100ms;">
+                    <img src="https://placehold.co/600x400/1a1a1a/ff410d?text=Cyber-Drake" class="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-500" alt="Racing Car Design 2">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-60 group-hover:opacity-80 transition-opacity duration-300"></div>
+                    <div class="absolute bottom-0 left-0 p-6">
+                        <h3 class="text-2xl font-bold text-white transform translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300">Cyber-Drake</h3>
+                    </div>
+                </div>
+                 <div class="group relative overflow-hidden rounded-lg shadow-lg fade-in-up" style="transition-delay: 200ms;">
+                    <img src="https://placehold.co/600x400/1a1a1a/ff410d?text=Apex+Wyvern" class="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-500" alt="Racing Car Design 3">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-60 group-hover:opacity-80 transition-opacity duration-300"></div>
+                    <div class="absolute bottom-0 left-0 p-6">
+                        <h3 class="text-2xl font-bold text-white transform translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300">Apex Wyvern</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="about" class="py-20 md:py-32">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex flex-col md:flex-row items-center gap-12 lg:gap-20">
+                <div class="md:w-1/2 fade-in-up">
+                    <img src="https://placehold.co/800x600/111111/FFFFFF?text=DSB+Dragon+Studio" class="rounded-lg shadow-xl" alt="Design Studio">
+                </div>
+                <div class="md:w-1/2 fade-in-up" style="transition-delay: 200ms;">
+                    <h2 class="section-title text-left mb-6">Where Art Meets <span class="accent-gradient-text">Aerodynamics</span></h2>
+                    <p class="text-gray-400 mb-4 text-lg">DSB Dragon is a laboratory for the future of speed. We are a collective of artists, engineers, and dreamers obsessed with pushing the boundaries of automotive design.</p>
+                    <p class="text-gray-400 mb-8 text-lg">Using state-of-the-art tools, we bring virtual concepts to life with stunning realism and engineering accuracy. Our mission is to provide designs that dominate on the track and captivate the imagination.</p>
+                    <a href="#contact" class="secondary-btn">Collaborate With Us</a>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <section id="contact" class="py-20 md:py-32 bg-black">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-12">
+                <h2 class="section-title">Let's Build the Future</h2>
+                <p class="section-subtitle">Have a project in mind or want to learn more? Drop us a line.</p>
+            </div>
+            <div class="max-w-xl mx-auto glass-card p-8">
+                <form action="#" method="POST" class="space-y-6">
+                    <input type="text" name="name" required class="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent-start)]" placeholder="Your Name">
+                    <input type="email" name="email" required class="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent-start)]" placeholder="Your Email">
+                    <textarea name="message" rows="4" required class="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent-start)]" placeholder="Your Message"></textarea>
+                    <button type="submit" class="primary-btn w-full">Send Message</button>
+                </form>
+            </div>
+        </div>
+    </section>
+
+    <footer class="bg-black py-8 border-t border-gray-800">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8 text-center text-gray-500">
+             <div class="flex justify-center space-x-6 mb-4">
+                <a href="#" class="hover:text-white transition"><i class="fab fa-twitter fa-lg"></i></a>
+                <a href="#" class="hover:text-white transition"><i class="fab fa-instagram fa-lg"></i></a>
+                <a href="#" class="hover:text-white transition"><i class="fab fa-linkedin-in fa-lg"></i></a>
+            </div>
+            <p>&copy; 2024 DSB Dragon Designs. All Rights Reserved.</p>
+        </div>
+    </footer>
+
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // --- Intersection Observer, Nav Bar, Mobile Menu, Particles (Same as before) ---
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => { if (entry.isIntersecting) entry.target.classList.add('visible'); });
+            }, { threshold: 0.1 });
+            document.querySelectorAll('.fade-in-up').forEach(el => observer.observe(el));
+            
+            const navbar = document.getElementById('navbar');
+            window.addEventListener('scroll', () => {
+                navbar.classList.toggle('bg-black/80', window.scrollY > 50);
+                navbar.classList.toggle('backdrop-blur-sm', window.scrollY > 50);
+            });
+            const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+            const mobileMenu = document.getElementById('mobile-menu');
+            mobileMenuBtn.addEventListener('click', () => mobileMenu.classList.toggle('hidden'));
+            mobileMenu.querySelectorAll('a').forEach(link => {
+                link.addEventListener('click', () => mobileMenu.classList.add('hidden'));
+            });
+
+            const particleCanvas = document.getElementById('particle-canvas');
+            if(particleCanvas){
+                const ctx = particleCanvas.getContext('2d');
+                let particles = [];
+                particleCanvas.width = window.innerWidth;
+                particleCanvas.height = window.innerHeight;
+
+                class Particle {
+                    constructor(x, y) { this.x = x; this.y = y; this.size = Math.random() * 2 + 1; this.speedX = Math.random() * 3 - 1.5; this.speedY = Math.random() * 3 - 1.5; this.color = `rgba(255, 65, 13, ${Math.random()})`; }
+                    update() { this.x += this.speedX; this.y += this.speedY; if (this.size > 0.2) this.size -= 0.05; }
+                    draw() { ctx.fillStyle = this.color; ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill(); }
+                }
+                function handleParticles() {
+                    for (let i = 0; i < particles.length; i++) {
+                        particles[i].update(); particles[i].draw();
+                        if (particles[i].size <= 0.3) { particles.splice(i, 1); i--; }
+                    }
+                }
+                window.addEventListener('mousemove', (e) => { if(Math.random() > 0.5) particles.push(new Particle(e.x, e.y)); });
+                function animateParticles(){ ctx.clearRect(0,0, particleCanvas.width, particleCanvas.height); handleParticles(); requestAnimationFrame(animateParticles); }
+                animateParticles();
+                window.addEventListener('resize', () => { particleCanvas.width = window.innerWidth; particleCanvas.height = window.innerHeight; });
+            }
+
+            // --- Enhanced Three.js Scene ---
+            const container = document.getElementById('canvas-container');
+            if (container) {
+                const loadingIndicator = document.getElementById('loading-indicator');
+                const scene = new THREE.Scene();
+                const camera = new THREE.PerspectiveCamera(60, container.clientWidth / container.clientHeight, 0.1, 1000);
+                const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('car-canvas'), antialias: true, alpha: true });
+                
+                renderer.setSize(container.clientWidth, container.clientHeight);
+                renderer.setPixelRatio(window.devicePixelRatio);
+                renderer.shadowMap.enabled = true;
+                renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+                renderer.toneMapping = THREE.ACESFilmicToneMapping;
+                renderer.toneMappingExposure = 1.2;
+                renderer.outputEncoding = THREE.sRGBEncoding;
+                
+                // Orbit Controls
+                const controls = new THREE.OrbitControls(camera, renderer.domElement);
+                controls.enableDamping = true;
+                controls.dampingFactor = 0.05;
+                controls.minDistance = 5;
+                controls.maxDistance = 15;
+                controls.maxPolarAngle = Math.PI / 2.1; // Prevent camera from going under the ground
+                controls.target.set(0, 1, 0);
+
+                // Lighting
+                scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+                const spotLight = new THREE.SpotLight(0xffffff, 1.5, 30, Math.PI * 0.15, 0.2);
+                spotLight.position.set(0, 15, 10);
+                spotLight.castShadow = true;
+                spotLight.shadow.mapSize.width = 2048;
+                spotLight.shadow.mapSize.height = 2048;
+                scene.add(spotLight);
+                const rimLight = new THREE.DirectionalLight(0xff410d, 4.0);
+                rimLight.position.set(2, 2, -5);
+                scene.add(rimLight);
+
+                // Ground Plane with Reflection
+                const groundGeo = new THREE.PlaneGeometry(50, 50);
+                const groundMat = new THREE.MeshStandardMaterial({
+                    color: 0x111111,
+                    metalness: 0.9,
+                    roughness: 0.4
+                });
+                const ground = new THREE.Mesh(groundGeo, groundMat);
+                ground.rotation.x = -Math.PI / 2;
+                ground.receiveShadow = true;
+                scene.add(ground);
+
+                // Model Loading
+                const loader = new THREE.GLTFLoader();
+                let model;
+
+                const modelUrl = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Buggy/glTF-Binary/Buggy.glb';
+
+                loader.load(modelUrl, (gltf) => {
+                    model = gltf.scene;
+                    model.scale.set(1.5, 1.5, 1.5);
+                    model.position.y = 0; // Set on top of the ground plane
+                    
+                    model.traverse(function(node) {
+                        if (node.isMesh) {
+                            node.castShadow = true;
+                            node.receiveShadow = true;
+                        }
+                    });
+
+                    scene.add(model);
+                    loadingIndicator.style.display = 'none';
+                }, 
+                (xhr) => {
+                    const percentLoaded = (xhr.loaded / xhr.total * 100).toFixed(0);
+                    loadingIndicator.innerText = `Loading Model... ${percentLoaded}%`;
+                },
+                (error) => {
+                    console.error('An error happened while loading the model:', error);
+                    loadingIndicator.innerText = 'Error loading model.';
+                });
+                
+                camera.position.set(-5, 4, 8);
+
+                function animate() {
+                    requestAnimationFrame(animate);
+                    controls.update(); // Required for damping
+                    renderer.render(scene, camera);
+                }
+
+                window.addEventListener('resize', () => {
+                    camera.aspect = container.clientWidth / container.clientHeight;
+                    camera.updateProjectionMatrix();
+                    renderer.setSize(container.clientWidth, container.clientHeight);
+                });
+                animate();
+            }
+        });
+    </script>
+</body>
+</html>
